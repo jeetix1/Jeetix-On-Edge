@@ -1,0 +1,15 @@
+body {
+    margin: 0;
+    background-color: #5c94fc; /* Sky */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+canvas {
+    border: 2px solid black;
+    background-color: #70c5ce; /* Canvas background if no background image */
+}
+
