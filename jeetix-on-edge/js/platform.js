@@ -13,7 +13,7 @@ export default class Platform {
             const blockWidth = 40; // Assuming original block image width
             const blockHeight = 40; // Assuming original block image height
             const numBlocksX = Math.ceil(this.width / blockWidth);
-            const numBlocksY = Math.ceil(this.height / blockHeight); // For platforms taller than one block
+            const numBlocksY = Math.ceil(this.height / blockHeight); // For platforms taller than one blockzzzzzz
 
             for (let i = 0; i < numBlocksX; i++) {
                 for (let j = 0; j < numBlocksY; j++) {
