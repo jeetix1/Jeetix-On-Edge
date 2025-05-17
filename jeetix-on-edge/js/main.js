@@ -22,8 +22,9 @@ let coins = [];
 let finishZone = null; 
 let inputHandler;
 let assets = {};
-let audioContext;
-let jumpSoundBuffer;
+let audioContext = null; 
+let jumpSoundBuffer = null;
+let soundLoaded = false;
 
 let lastTime = 0;
 let score = 0;
@@ -51,7 +52,6 @@ async function loadImage(src) {
 }
 
 async function loadSound(url) {
-    if (!audioContext) return null;
     try {
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
@@ -65,20 +65,28 @@ async function loadSound(url) {
 
 function playSound(buffer) {
     if (!audioContext || !buffer) return;
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start(0);
+    audioContext.resume().then(() => {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+    });
 }
 
-function initAudio() {
+function initAudioAndLoadSound() {
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
+    if (!soundLoaded) {
+        loadSound('jump.mp3').then(buffer => {
+            jumpSoundBuffer = buffer;
+            soundLoaded = true;
+        });
+    }
 }
 
-document.addEventListener('click', initAudio, { once: true });
-document.addEventListener('keydown', initAudio, { once: true });
+document.addEventListener('click', initAudioAndLoadSound, { once: true });
+document.addEventListener('keydown', initAudioAndLoadSound, { once: true });
 
 async function loadLevelCSV(filePath) {
     try {
@@ -124,9 +132,9 @@ async function setupLevel(levelIndex) {
                 case 'G':
                     platforms.push(new Platform(x, y, TILE_SIZE, TILE_SIZE, assets.block));
                     break;
-                    case 'C':
-                        coins.push(new Coin(x, y, TILE_SIZE, TILE_SIZE, assets.coin, 11, 10));
-                        break;
+                case 'C':
+                    coins.push(new Coin(x, y, TILE_SIZE, TILE_SIZE, assets.coin, 11, 10));
+                    break;
                 case 'S':
                     playerStartX = x;
                     playerStartY = y;
@@ -136,7 +144,7 @@ async function setupLevel(levelIndex) {
                     break;
                 case 'F':
                     finishZone = { x, y, width: TILE_SIZE, height: TILE_SIZE };
-                     if (assets.finish) {
+                    if (assets.finish) {
                         finishBlockInstance = { x, y, width: TILE_SIZE, height: TILE_SIZE, image: assets.finish };
                     }
                     break;
@@ -149,7 +157,7 @@ async function setupLevel(levelIndex) {
     } else {
         player = new Player(playerStartX, playerStartY, assets.jeetix, playJumpSound);
     }
-    // Initial camera position update after player is set
+        // Initial camera position update after player is set
     updateCamera(); 
     return true; 
 }
@@ -162,7 +170,7 @@ async function setupGame() {
         assets.coin = await loadImage('coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
         assets.start = await loadImage('start.png'); // show start block (set invisible for production)
         assets.finish = await loadImage('finish.png'); // show finish block (set invisible for production)
-        jumpSoundBuffer = await loadSound('jump.mp3'); // (Jump sound not working for some reason.)
+        // IKKE last jump.mp3 her
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
@@ -172,9 +180,8 @@ async function setupGame() {
     }
 
     inputHandler = new InputHandler();
-    
-    const levelLoadedSuccessfully = await setupLevel(currentLevelIndex);
-    if (!levelLoadedSuccessfully) return; 
+    const levelOK = await setupLevel(currentLevelIndex);
+    if (!levelOK) return;
 
     gameLoop(0);
 }
@@ -188,8 +195,8 @@ function resetCurrentLevel() {
     console.log("Resetting current level");
     setupLevel(currentLevelIndex).then(success => {
         if (success && player) {
-             player.resetState(playerStartX, playerStartY);
-             updateCamera(); // Ensure camera resets too
+            player.resetState(playerStartX, playerStartY);
+            updateCamera(); // Ensure camera resets too
         }
     });
 }
@@ -204,7 +211,7 @@ function goToNextLevel() {
         console.log("Going to next level:", currentLevelIndex);
         setupLevel(currentLevelIndex).then(success => {
             if (success && player) {
-                 player.resetState(playerStartX, playerStartY);
+                player.resetState(playerStartX, playerStartY);
                  updateCamera(); // Ensure camera updates for new level
             }
         });
