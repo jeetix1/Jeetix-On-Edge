@@ -25,6 +25,10 @@ let assets = {};
 let audioContext = null; 
 let jumpSoundBuffer = null;
 let soundLoaded = false;
+let bgMusicBuffer = null;
+let bgMusicSource = null;
+let coinSoundBuffer = null;
+let coinSoundLoaded = false;
 
 let lastTime = 0;
 let score = 0;
@@ -62,6 +66,11 @@ async function loadSound(url) {
         return null;
     }
 }
+async function loadBackgroundMusic(url) {
+    const resp = await fetch(url);
+    const arr = await resp.arrayBuffer();
+    return audioContext.decodeAudioData(arr);
+}
 
 function playSound(buffer) {
     if (!audioContext || !buffer) return;
@@ -73,14 +82,39 @@ function playSound(buffer) {
     });
 }
 
+function playBackgroundMusic() {
+    if (!bgMusicBuffer) return;
+    if (bgMusicSource) {
+        bgMusicSource.stop();
+    }
+    bgMusicSource = audioContext.createBufferSource();
+    bgMusicSource.buffer = bgMusicBuffer;
+    bgMusicSource.loop = true;
+    bgMusicSource.connect(audioContext.destination);
+    bgMusicSource.start(0);
+}
+
+
 function initAudioAndLoadSound() {
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (!soundLoaded) {
-        loadSound('jump.mp3').then(buffer => {
-            jumpSoundBuffer = buffer;
+        loadSound('sound/jump.mp3').then(buf => {
+            jumpSoundBuffer = buf;
             soundLoaded = true;
+        });
+    }
+    if (!coinSoundLoaded) {
+        loadSound('sound/coin_pickup.mp3').then(buf => {
+            coinSoundBuffer = buf;
+            coinSoundLoaded = true;
+        });
+    }
+    if (!bgMusicBuffer) {
+        loadBackgroundMusic('music/Jeetix_on_edge_theme.mp3').then(buf => {
+            bgMusicBuffer = buf;
+            playBackgroundMusic();
         });
     }
 }
@@ -164,7 +198,7 @@ async function setupLevel(levelIndex) {
 
 async function setupGame() {
     try {
-        assets.jeetix = await loadImage('jeetix.png');
+        assets.jeetix = await loadImage('jeetix3.png');
         assets.block = await loadImage('block.png');
         assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png'); 
         assets.coin = await loadImage('coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
@@ -229,6 +263,7 @@ function checkCollisions() {
             player.y + player.height > coin.y) {
             coin.collected = true;
             score += 10;
+            if (coinSoundBuffer) playSound(coinSoundBuffer);
         }
     });
 

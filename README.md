@@ -10,7 +10,7 @@ Jeetix On Edge is a 2D platform game that runs in the web browser. It is built u
 - Coin collection.
 - Point scoring.
 - Simple graphics.
-    - Character: jeetix.png Caracter belongs to https://x.com/jeetix
+    - Character: jeetix3.png Caracter belongs to https://x.com/jeetix
     - Image assets and editable source files.
     - Sound effects: (sound effects are currently not working.)
 
