@@ -1,37 +1,51 @@
 export default class Player {
     constructor(x, y, image, playJumpSoundCallback) {
-        this.image = image;
+        this.image  = image;
+        this.walkFrames    = 3;                    // now 3 panels in sheet
+        this.frameDuration = 200;                  // ms per frame
+        this.frameTimer    = 0;
+        this.currentFrame  = 0;
+        this.frameWidth  = image.width  / this.walkFrames;
+        this.frameHeight = image.height;
         this.width = 32; 
         this.height = 42;
-        this.startX = x; 
-        this.startY = y; 
+
+        this.startX = x;
+        this.startY = y;
         this.x = x;
         this.y = y;
         this.vx = 0;
         this.vy = 0;
         this.onGround = false;
         this.playJumpSound = playJumpSoundCallback;
-        this.facingRight = true; 
+        this.facingRight = true;
     }
 
     draw(ctx) {
         if (!this.image) {
-            ctx.fillStyle = 'red'; // Fallback if image not loaded
+            ctx.fillStyle = 'red';
             ctx.fillRect(this.x, this.y, this.width, this.height);
             return;
         }
 
-        // Flip image if facing left
-        if (!this.facingRight) {
-            ctx.save();
-            ctx.scale(-1, 1);
-            ctx.drawImage(this.image, -this.x - this.width, this.y, this.width, this.height);
-            ctx.restore();
-        } else {
-            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-        }
-    }
+        const sx = this.currentFrame * this.frameWidth;
 
+        ctx.save();
+                // Flip image if facing left
+        if (!this.facingRight) {
+            ctx.translate(this.x + this.width, this.y);
+            ctx.scale(-1, 1);
+        } else {
+            ctx.translate(this.x, this.y);
+        }
+
+        ctx.drawImage(
+            this.image,
+            sx, 0, this.frameWidth, this.frameHeight, 
+            0,  0, this.width,      this.height      
+        );
+        ctx.restore();
+    }
     update(deltaTime, input, platforms, gravity, playerSpeed, jumpForce, levelWidth, levelHeight) { 
         // Horizontal movement
         if (input.isPressed('ArrowLeft')) {
@@ -67,22 +81,32 @@ export default class Player {
                         this.y = platform.y - this.height;
                         this.vy = 0;
                         this.onGround = true;
-                    } else if (this.vy < 0 && (this.y + overlapY) >= (platform.y + platform.height -1) ) { // Hitting bottom (-1 for better detection)
+                    } else if (this.vy < 0 && (this.y + overlapY) >= (platform.y + platform.height - 1)) { // Hitting bottom (-1 for better detection)
                         this.y = platform.y + platform.height;
                         this.vy = 0;
                     }
                 } else { // Horizontal collision
-                     if (this.vx > 0 && (this.x + this.width - overlapX) <= platform.x +1 ) { // Colliding with left side of platform
+                    if (this.vx > 0 && (this.x + this.width - overlapX) <= platform.x + 1) { // Colliding with left side of platform
                         this.x = platform.x - this.width;
                         this.vx = 0;
-                    } else if (this.vx < 0 && (this.x + overlapX) >= (platform.x + platform.width -1) ) { // Colliding with right side of platform
+                    } else if (this.vx < 0 && (this.x + overlapX) >= (platform.x + platform.width - 1)) { // Colliding with right side of platform
                         this.x = platform.x + platform.width;
                         this.vx = 0;
                     }
                 }
             }
         });
-        
+        if (this.vx !== 0 && this.onGround) {
+            this.frameTimer += deltaTime * 16;
+            if (this.frameTimer >= this.frameDuration) {
+                this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
+                this.frameTimer -= this.frameDuration;
+            }
+        } else {
+            this.currentFrame = 0;
+            this.frameTimer = 0;
+        }
+
         // Jump
         if ((input.isPressed('Space') || input.isPressed('ArrowUp')) && this.onGround) {
             this.vy = jumpForce;
