@@ -2,6 +2,7 @@ import Player from './player.js';
 import Platform from './platform.js';
 import InputHandler from './input.js';
 import Coin from './coin.js';
+import ScoreManager from './scores.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -14,15 +15,15 @@ canvas.height = GAME_HEIGHT;
 const GRAVITY = 0.5;
 const PLAYER_SPEED = 5;
 const JUMP_FORCE = -12;
-const TILE_SIZE = 40; 
+const TILE_SIZE = 40;
 
 let player;
 let platforms = [];
 let coins = [];
-let finishZone = null; 
+let finishZone = null;
 let inputHandler;
 let assets = {};
-let audioContext = null; 
+let audioContext = null;
 let jumpSoundBuffer = null;
 let soundLoaded = false;
 let bgMusicBuffer = null;
@@ -31,10 +32,10 @@ let coinSoundBuffer = null;
 let coinSoundLoaded = false;
 
 let lastTime = 0;
-let score = 0;
 let currentLevelIndex = 0;
 const levelFileNames = ['level_001.csv', 'level_002.csv'];
 let gameWon = false;
+let newHighScore = false;
 let playerStartX, playerStartY;
 
 // NCamera and level dimensions
@@ -133,7 +134,7 @@ async function loadLevelCSV(filePath) {
         return rows.map(row => row.split(''));
     } catch (error) {
         console.error(`Error loading or parsing CSV ${filePath}:`, error);
-        return null; 
+        return null;
     }
 }
 
@@ -143,8 +144,9 @@ async function setupLevel(levelIndex) {
         ctx.fillStyle = 'red';
         ctx.font = '20px Arial';
         ctx.fillText(`Error loading level ${levelIndex + 1}. Please refresh.`, 50, 100);
-        gameWon = true; 
-        return false; 
+        gameWon = true;
+        newHighScore = ScoreManager.flush();
+        return false;
     }
 
     platforms = [];
@@ -192,15 +194,15 @@ async function setupLevel(levelIndex) {
         player = new Player(playerStartX, playerStartY, assets.jeetix, playJumpSound);
     }
         // Initial camera position update after player is set
-    updateCamera(); 
-    return true; 
+    updateCamera();
+    return true;
 }
 
 async function setupGame() {
     try {
         assets.jeetix = await loadImage('jeetix3.png');
         assets.block = await loadImage('block.png');
-        assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png'); 
+        assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png');
         assets.coin = await loadImage('coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
         assets.start = await loadImage('start.png'); // show start block (set invisible for production)
         assets.finish = await loadImage('finish.png'); // show finish block (set invisible for production)
@@ -225,7 +227,7 @@ function playJumpSound() {
 }
 
 function resetCurrentLevel() {
-    if (gameWon) return; 
+    if (gameWon) return;
     console.log("Resetting current level");
     setupLevel(currentLevelIndex).then(success => {
         if (success && player) {
@@ -240,6 +242,7 @@ function goToNextLevel() {
     currentLevelIndex++;
     if (currentLevelIndex >= levelFileNames.length) {
         gameWon = true;
+        newHighScore = ScoreManager.flush();
         console.log("Game Won!");
     } else {
         console.log("Going to next level:", currentLevelIndex);
@@ -262,7 +265,7 @@ function checkCollisions() {
             player.y < coin.y + coin.height &&
             player.y + player.height > coin.y) {
             coin.collected = true;
-            score += 10;
+            ScoreManager.add(10);
             if (coinSoundBuffer) playSound(coinSoundBuffer);
         }
     });
@@ -342,8 +345,13 @@ function render() {
         ctx.textAlign = 'center';
         ctx.fillText('YOU WIN!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30);
         ctx.font = '30px Arial';
-        ctx.fillText(`Final Score: ${score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
-        ctx.textAlign = 'left'; 
+        ctx.fillText(`Final Score: ${ScoreManager.get()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+        if (newHighScore) {
+            ctx.fillText(`Highscore Score: ${ScoreManager.getHighScore()} New!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
+        } else {
+            ctx.fillText(`Highscore Score: ${ScoreManager.getHighScore()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
+        }
+        ctx.textAlign = 'left';
         return;
     }
     
@@ -376,7 +384,7 @@ function render() {
     // Draw UI elements (fixed on screen)
     ctx.fillStyle = 'white';
     ctx.font = '24px Arial';
-    ctx.fillText(`Score: ${score}`, 20, 30);
+    ctx.fillText(`Score: ${ScoreManager.get()}`, 20, 30);
     ctx.fillText(`Level: ${currentLevelIndex + 1}`, GAME_WIDTH - 120, 30);
 }
 
@@ -385,7 +393,7 @@ function gameLoop(timestamp) {
     lastTime = timestamp;
 
     if (!isNaN(deltaTime) && deltaTime > 0) { 
-        update(deltaTime / 16); 
+        update(deltaTime / 16);
     }
     render();
 
