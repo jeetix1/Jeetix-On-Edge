@@ -1,41 +1,42 @@
 const STORAGE_NAME = 'score'
 
-function makeScoreManager() {
-    let score = 0
-    let highScore = _fromStorageOrFail()
-
-    function get() {
-        return score
-    }
-
-    function set(value) {
-        score = value
-    }
-
-    function add(value) {
-        score += value
-    }
-
-    // Saves score to localstorage if it's a new highscore, returns a bool based on if it's a new highscore or not
-    function flush() {
-        if (score <= highScore) {
-            return false
-        }
-
-        try {
-            localStorage.setItem(STORAGE_NAME, `${score}`)
-        } catch { /* Possibly out of storage */ }
-
-        highScore = score
-
-        return true
-    }
+export default function ScoreManager() {
+    let currentScore = 0
+    let highScore = _fromStorageOrDefault()
 
     function getHighScore() {
         return highScore
     }
 
-    function _fromStorageOrFail() {
+    function get() {
+        return currentScore
+    }
+
+    function set(value) {
+        currentScore = value
+    }
+
+    function add(value) {
+        currentScore += value
+    }
+
+    // saves the score to local storage if it's a new high score
+    // also returns a bool based on if it was a high score or not
+    function flushToStorage() {
+        if (currentScore <= highScore) {
+            return false
+        }
+
+        try {
+            localStorage.setItem(STORAGE_NAME, `${currentScore}`)
+        } catch { /* Possibly out of storage */ }
+
+        highScore = currentScore
+
+        return true
+    }
+
+    function _fromStorageOrDefault() {
         const local = Number(localStorage.getItem(STORAGE_NAME))
 
         if (isNaN(local)) {
@@ -49,11 +50,7 @@ function makeScoreManager() {
         get,
         set,
         add,
-        flush,
+        flushToStorage,
         getHighScore,
     }
 }
-
-const ScoreManager = makeScoreManager()
-
-export default ScoreManager

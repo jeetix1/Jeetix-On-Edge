@@ -35,7 +35,8 @@ let lastTime = 0;
 let currentLevelIndex = 0;
 const levelFileNames = ['level_001.csv', 'level_002.csv'];
 let gameWon = false;
-let newHighScore = false;
+let isHighScore = false;
+let score = ScoreManager();
 let playerStartX, playerStartY;
 
 // NCamera and level dimensions
@@ -145,7 +146,7 @@ async function setupLevel(levelIndex) {
         ctx.font = '20px Arial';
         ctx.fillText(`Error loading level ${levelIndex + 1}. Please refresh.`, 50, 100);
         gameWon = true;
-        newHighScore = ScoreManager.flush();
+        isHighScore = score.flushToStorage();
         return false;
     }
 
@@ -242,7 +243,7 @@ function goToNextLevel() {
     currentLevelIndex++;
     if (currentLevelIndex >= levelFileNames.length) {
         gameWon = true;
-        newHighScore = ScoreManager.flush();
+        isHighScore = score.flushToStorage();
         console.log("Game Won!");
     } else {
         console.log("Going to next level:", currentLevelIndex);
@@ -265,7 +266,7 @@ function checkCollisions() {
             player.y < coin.y + coin.height &&
             player.y + player.height > coin.y) {
             coin.collected = true;
-            ScoreManager.add(10);
+            score.add(10);
             if (coinSoundBuffer) playSound(coinSoundBuffer);
         }
     });
@@ -345,11 +346,11 @@ function render() {
         ctx.textAlign = 'center';
         ctx.fillText('YOU WIN!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30);
         ctx.font = '30px Arial';
-        ctx.fillText(`Final Score: ${ScoreManager.get()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
-        if (newHighScore) {
-            ctx.fillText(`Highscore Score: ${ScoreManager.getHighScore()} New!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
+        ctx.fillText(`Final Score: ${score.get()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+        if (isHighScore) {
+            ctx.fillText(`Highscore Score: ${score.getHighScore()} New!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
         } else {
-            ctx.fillText(`Highscore Score: ${ScoreManager.getHighScore()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
+            ctx.fillText(`Highscore Score: ${score.getHighScore()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
         }
         ctx.textAlign = 'left';
         return;
@@ -384,7 +385,7 @@ function render() {
     // Draw UI elements (fixed on screen)
     ctx.fillStyle = 'white';
     ctx.font = '24px Arial';
-    ctx.fillText(`Score: ${ScoreManager.get()}`, 20, 30);
+    ctx.fillText(`Score: ${score.get()}`, 20, 30);
     ctx.fillText(`Level: ${currentLevelIndex + 1}`, GAME_WIDTH - 120, 30);
 }
 
