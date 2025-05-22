@@ -3,7 +3,6 @@ import Platform from './platform.js';
 import InputHandler from './input.js';
 import Coin from './coin.js';
 import ScoreManager from './scores.js';
-// NEW IMPORTS FOR LAVA AND JUMPPAD
 import LavaBlock from './lava.js';
 import JumpPadBlock from './jumppad.js';
 
@@ -25,6 +24,8 @@ let player;
 let platforms = [];
 let coins = [];
 
+let lives = 3;
+
 let lavaBlocks = []; // Array for lava blocks
 let finishZone = null;
 let inputHandler;
@@ -36,7 +37,9 @@ let bgMusicBuffer = null;
 let bgMusicSource = null;
 let coinSoundBuffer = null;
 let coinSoundLoaded = false;
-// NEW SOUND BUFFER FOR LAVA AND JUMPPAD
+
+let showGameOverScreen = false;
+
 let lavaSoundBuffer;
 let jumpPadSoundBuffer;
 
@@ -253,20 +256,15 @@ async function setupLevel(levelIndex) {
 
 async function setupGame() {
     try {
+        assets.lifeIcon = await loadImage('./assets/img/life_icon.png');
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
         assets.block = await loadImage('./assets/img/block.png');
-        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
-        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
-        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
-        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
-        assets.lava = await loadImage('./assets/img/lava.png'); // Load lava image
-        assets.jumppad = await loadImage('./assets/img/jumppad.png'); // Load jump pad image
-        assets.jeetix = await loadImage('./assets/img/jeetix.png');
-        assets.block = await loadImage('./assets/img/block.png');
-        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
-        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
-        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
-        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
+        assets.background = await loadImage('./assets/img/background2.png'); 
+        assets.coin = await loadImage('./assets/img/coin-sprite.png'); 
+        assets.start = await loadImage('./assets/img/start.png'); 
+        assets.finish = await loadImage('./assets/img/finish.png'); 
+        assets.lava = await loadImage('./assets/img/lava.png'); 
+        assets.jumppad = await loadImage('./assets/img/jumppad.png'); 
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
@@ -276,6 +274,23 @@ async function setupGame() {
     }
 
     inputHandler = new InputHandler();
+    canvas.addEventListener('click', (event) => {
+    if (!showGameOverScreen) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const buttonX = GAME_WIDTH / 2 - 75;
+    const buttonY = GAME_HEIGHT / 2 + 30;
+    const buttonWidth = 150;
+    const buttonHeight = 40;
+
+    if (x >= buttonX && x <= buttonX + buttonWidth &&
+        y >= buttonY && y <= buttonY + buttonHeight) {
+        restartGame();
+    }
+});
     const levelOK = await setupLevel(currentLevelIndex);
     if (!levelOK) return;
 
@@ -288,14 +303,25 @@ function playJumpSound() {
 
 function resetCurrentLevel() {
     if (gameWon) return;
-    console.log("Resetting current level");
+
+    lives--;
+    if (lives <= 0) {
+        gameWon = true;
+        showGameOverScreen = true;
+        isHighScore = score.flushToStorage();
+        console.log('GAME OVER triggered');
+        return;
+    }
+
     setupLevel(currentLevelIndex).then(success => {
         if (success && player) {
             player.resetState(playerStartX, playerStartY);
-            updateCamera(); // Ensure camera resets too
+            updateCamera();
         }
     });
 }
+
+
 
 function goToNextLevel() {
     if (gameWon) return;
@@ -309,7 +335,7 @@ function goToNextLevel() {
         setupLevel(currentLevelIndex).then(success => {
             if (success && player) {
                 player.resetState(playerStartX, playerStartY);
-                 updateCamera(); // Ensure camera updates for new level
+                 updateCamera(); 
             }
         });
     }
@@ -330,7 +356,7 @@ function checkCollisions() {
         }
     });
 
-    // NEW COLLISION CHECK FOR LAVA BLOCKS
+    
     lavaBlocks.forEach(lava => {
         if (player.x < lava.x + lava.width &&
             player.x + player.width > lava.x &&
@@ -383,6 +409,34 @@ function update(deltaTime) {
 function render() {
     // Clear canvas (will be covered by background)
     ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+        if (showGameOverScreen) {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)'
+        ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT)
+
+        ctx.fillStyle = 'red'
+        ctx.font = '48px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText('YOU DONE FUCKED UP, SON', GAME_WIDTH/2, GAME_HEIGHT/2 - 60)
+
+        ctx.font = '24px Arial'
+        ctx.fillStyle = 'white'
+        ctx.fillText(`Final Score: ${score.get()}`, GAME_WIDTH/2, GAME_HEIGHT/2 - 10)
+
+        const bx = GAME_WIDTH/2 - 75
+        const by = GAME_HEIGHT/2 + 30
+        const bw = 150
+        const bh = 40
+
+        ctx.fillStyle = '#ff4444'
+        ctx.fillRect(bx, by, bw, bh)
+        ctx.strokeStyle = 'white'
+        ctx.strokeRect(bx, by, bw, bh)
+
+        ctx.fillStyle = 'white'
+        ctx.fillText('RETRY', GAME_WIDTH/2, by + 27)
+        return
+    }
 
     // Draw Background (loops and scrolls with parallax)
     if (assets.background) {
@@ -459,8 +513,20 @@ function render() {
     // Draw UI elements (fixed on screen)
     ctx.fillStyle = 'white';
     ctx.font = '24px Arial';
-    ctx.fillText(`Score: ${score.get()}`, 20, 30);
-    ctx.fillText(`Level: ${currentLevelIndex + 1}`, GAME_WIDTH - 120, 30);
+    ctx.textAlign = 'center';
+    ctx.fillText(`Score: ${score.get()}`, GAME_WIDTH / 2, 30);
+    ctx.textAlign = 'right';
+    ctx.fillText(`Level: ${currentLevelIndex + 1}`, GAME_WIDTH - 20, 30);
+    ctx.textAlign = 'left';
+    if (assets.lifeIcon) {
+        const iconSize = 32;
+        const iconX = 20;
+        const iconY = 10;
+        ctx.drawImage(assets.lifeIcon, iconX, iconY, iconSize, iconSize);
+        ctx.fillText(`x ${lives}`, iconX + iconSize + 5, iconY + 24);
+    }
+    ctx.textAlign = 'left';
+
 }
 
 function gameLoop(timestamp) {
@@ -476,6 +542,16 @@ function gameLoop(timestamp) {
     render();
 
     requestAnimationFrame(gameLoop);
+
+
+}
+function restartGame() {
+    lives = 4;
+    score.set(0);
+    currentLevelIndex = 0;
+    gameWon = false;
+    showGameOverScreen = false;
+    setupLevel(currentLevelIndex);
 }
 
 setupGame();
