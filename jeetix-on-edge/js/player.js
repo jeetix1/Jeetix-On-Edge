@@ -7,8 +7,8 @@ export default class Player {
         this.currentFrame  = 0;
         this.frameWidth  = image.width  / this.walkFrames;
         this.frameHeight = image.height;
-        this.width = 32; 
-        this.height = 42;
+        this.width = 30; 
+        this.height = 40;
 
         this.startX = x;
         this.startY = y;
