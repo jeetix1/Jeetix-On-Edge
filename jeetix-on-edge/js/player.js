@@ -1,6 +1,6 @@
 export default class Player {
-    constructor(x, y, image, playJumpSoundCallback) {
-        this.image  = image;
+    constructor(x, y, image, playJumpSoundCallback, jumpPadBoostAmount, playJumpPadSoundCallback) {
+        this.image = image;
         this.walkFrames    = 3;                    // now 3 panels in sheet
         this.frameDuration = 200;                  // ms per frame
         this.frameTimer    = 0;
@@ -19,6 +19,9 @@ export default class Player {
         this.onGround = false;
         this.playJumpSound = playJumpSoundCallback;
         this.facingRight = true;
+
+        this.jumpPadBoostAmount = jumpPadBoostAmount; 
+        this.playJumpPadSound = playJumpPadSoundCallback; 
     }
 
     draw(ctx) {
@@ -81,7 +84,13 @@ export default class Player {
                         this.y = platform.y - this.height;
                         this.vy = 0;
                         this.onGround = true;
-                    } else if (this.vy < 0 && (this.y + overlapY) >= (platform.y + platform.height - 1)) { // Hitting bottom (-1 for better detection)
+
+                        if (platform.isJumpPad) {
+                            this.vy = this.jumpPadBoostAmount; 
+                            this.onGround = false; 
+                            if (this.playJumpPadSound) this.playJumpPadSound();
+                        }
+                    } else if (this.vy < 0 && (this.y + overlapY) >= (platform.y + platform.height -1) ) { // Hitting bottom (-1 for better detection)
                         this.y = platform.y + platform.height;
                         this.vy = 0;
                     }
@@ -123,11 +132,6 @@ export default class Player {
             this.x = levelWidth - this.width;
             this.vx = 0;
         }
-
-        // Player falling off the bottom of the level is handled in main.js
-        // by checking player.y > levelHeight.
-        // No specific check needed here for y > levelHeight + this.height,
-        // as main.js will handle the reset.
     }
 
     resetState(x, y) {
@@ -136,5 +140,6 @@ export default class Player {
         this.vx = 0;
         this.vy = 0;
         this.onGround = false;
+        this.facingRight = true; 
     }
 }
