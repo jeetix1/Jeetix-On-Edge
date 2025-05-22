@@ -24,6 +24,7 @@ const TILE_SIZE = 40;
 let player;
 let platforms = [];
 let coins = [];
+
 let lavaBlocks = []; // Array for lava blocks
 let finishZone = null;
 let inputHandler;
@@ -260,6 +261,13 @@ async function setupGame() {
         assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
         assets.lava = await loadImage('./assets/img/lava.png'); // Load lava image
         assets.jumppad = await loadImage('./assets/img/jumppad.png'); // Load jump pad image
+        assets.jeetix = await loadImage('jeetix3.png');
+        assets.block = await loadImage('block.png');
+        assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png');
+        assets.coin = await loadImage('coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
+        assets.start = await loadImage('start.png'); // show start block (set invisible for production)
+        assets.finish = await loadImage('finish.png'); // show finish block (set invisible for production)
+        // IKKE last jump.mp3 her
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
@@ -460,8 +468,10 @@ function gameLoop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
 
+
     if (!isNaN(deltaTime) && deltaTime > 0) {
         const cappedDeltaTime = Math.min(deltaTime, 50); // Max 50ms, prevents huge jumps
+
         update(deltaTime / 16);
     }
     render();
