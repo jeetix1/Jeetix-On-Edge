@@ -261,13 +261,12 @@ async function setupGame() {
         assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
         assets.lava = await loadImage('./assets/img/lava.png'); // Load lava image
         assets.jumppad = await loadImage('./assets/img/jumppad.png'); // Load jump pad image
-        assets.jeetix = await loadImage('jeetix3.png');
-        assets.block = await loadImage('block.png');
-        assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png');
-        assets.coin = await loadImage('coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
-        assets.start = await loadImage('start.png'); // show start block (set invisible for production)
-        assets.finish = await loadImage('finish.png'); // show finish block (set invisible for production)
-        // IKKE last jump.mp3 her
+        assets.jeetix = await loadImage('./assets/img/jeetix.png');
+        assets.block = await loadImage('./assets/img/block.png');
+        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
+        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
+        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
+        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
