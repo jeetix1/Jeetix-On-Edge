@@ -5,6 +5,7 @@ import Coin from './coin.js';
 import ScoreManager from './scores.js';
 import LavaBlock from './lava.js';
 import JumpPadBlock from './jumppad.js';
+import Life from './Life.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -23,6 +24,7 @@ const TILE_SIZE = 40;
 let player;
 let platforms = [];
 let coins = [];
+let lifePickups = [];
 
 let lives = 3;
 
@@ -190,11 +192,11 @@ async function setupLevel(levelIndex) {
 
     platforms = [];
     coins = [];
-    lavaBlocks = []; // Clear lava blocks for new level
+    lifePickups = [] ;
+    lavaBlocks = [];
     finishZone = null;
     startBlockInstance = null;
     finishBlockInstance = null;
-    // Score persists between levels
 
     levelPixelHeight = levelData.length * TILE_SIZE;
     levelPixelWidth = (levelData[0] ? levelData[0].length : 0) * TILE_SIZE;
@@ -224,14 +226,15 @@ async function setupLevel(levelIndex) {
                         finishBlockInstance = { x, y, width: TILE_SIZE, height: TILE_SIZE, image: assets.finish };
                     }
                     break;
-                // NEW CASES FOR LAVA AND JUMPPAD BLOCKS
-                case 'L': // Lava block
+                case 'L':
                     lavaBlocks.push(new LavaBlock(x, y, TILE_SIZE, TILE_SIZE, assets.lava));
                     break;
-                case 'J': // Jump Pad block
-                    // Jump pads are solid, so add to platforms array. Player class will handle special interaction.
+                case 'J':
                     platforms.push(new JumpPadBlock(x, y, TILE_SIZE, TILE_SIZE, assets.jumppad));
                     break;
+case 'H':
+  lifePickups.push(new Life(x, y, assets.life, 22, 10))
+  break
             }
         });
     });
@@ -265,6 +268,7 @@ async function setupGame() {
         assets.finish = await loadImage('./assets/img/finish.png'); 
         assets.lava = await loadImage('./assets/img/lava.png'); 
         assets.jumppad = await loadImage('./assets/img/jumppad.png'); 
+        assets.life = await loadImage('./assets/img/life_pickup.png')
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
@@ -302,23 +306,19 @@ function playJumpSound() {
 }
 
 function resetCurrentLevel() {
-    if (gameWon) return;
+  if (gameWon) return
 
-    lives--;
-    if (lives <= 0) {
-        gameWon = true;
-        showGameOverScreen = true;
-        isHighScore = score.flushToStorage();
-        console.log('GAME OVER triggered');
-        return;
-    }
+  lives--
+  if (lives <= 0) {
+    gameWon = true
+    showGameOverScreen = true
+    isHighScore = score.flushToStorage()
+    console.log('GAME OVER triggered')
+    return
+  }
 
-    setupLevel(currentLevelIndex).then(success => {
-        if (success && player) {
-            player.resetState(playerStartX, playerStartY);
-            updateCamera();
-        }
-    });
+  player.resetState(playerStartX, playerStartY)
+  updateCamera()
 }
 
 
@@ -353,6 +353,19 @@ function checkCollisions() {
             coin.collected = true;
             score.add(10);
             if (coinSoundBuffer) playSound(coinSoundBuffer);
+        }
+    });
+
+
+    lifePickups.forEach(lp => {
+        if (lp.collected) return
+        if (player.x < lp.x + lp.width &&
+            player.x + player.width > lp.x &&
+            player.y < lp.y + lp.height &&
+            player.y + player.height > lp.y) {
+            lp.collected = true
+            lives++
+            if (coinSoundBuffer) playSound(coinSoundBuffer)
         }
     });
 
@@ -396,6 +409,7 @@ function update(deltaTime) {
     if (gameWon || !player) return;
 
     player.update(deltaTime, inputHandler, platforms, GRAVITY, PLAYER_SPEED, JUMP_FORCE, levelPixelWidth, levelPixelHeight);
+    lifePickups.forEach(lp => lp.update(deltaTime));
     coins.forEach(coin => coin.update(deltaTime));
     checkCollisions();
     updateCamera();
@@ -502,6 +516,7 @@ function render() {
 
     platforms.forEach(platform => platform.draw(ctx)); // JumpPads are drawn here as they are in platforms array
     coins.forEach(coin => coin.draw(ctx));
+    lifePickups.forEach(lp => lp.draw(ctx));
     lavaBlocks.forEach(lava => lava.draw(ctx)); // Draw lava blocks
     
     if (player) {
