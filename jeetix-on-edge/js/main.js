@@ -546,8 +546,8 @@ function gameLoop(timestamp) {
 
 }
 function restartGame() {
-    lives = 3;
-    score.reset();
+    lives = 4;
+    score.set(0);
     currentLevelIndex = 0;
     gameWon = false;
     showGameOverScreen = false;
