@@ -3,6 +3,9 @@ import Platform from './platform.js';
 import InputHandler from './input.js';
 import Coin from './coin.js';
 import ScoreManager from './scores.js';
+// NEW IMPORTS FOR LAVA AND JUMPPAD
+import LavaBlock from './lava.js';
+import JumpPadBlock from './jumppad.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -15,11 +18,14 @@ canvas.height = GAME_HEIGHT;
 const GRAVITY = 0.5;
 const PLAYER_SPEED = 5;
 const JUMP_FORCE = -12;
+const JUMP_PAD_BOOST = JUMP_FORCE * 2; // Jump pad boost is double the normal jump force
 const TILE_SIZE = 40;
 
 let player;
 let platforms = [];
 let coins = [];
+
+let lavaBlocks = []; // Array for lava blocks
 let finishZone = null;
 let inputHandler;
 let assets = {};
@@ -30,10 +36,19 @@ let bgMusicBuffer = null;
 let bgMusicSource = null;
 let coinSoundBuffer = null;
 let coinSoundLoaded = false;
+// NEW SOUND BUFFER FOR LAVA AND JUMPPAD
+let lavaSoundBuffer;
+let jumpPadSoundBuffer;
+
 
 let lastTime = 0;
 let currentLevelIndex = 0;
-const levelFileNames = ['level_001.csv', 'level_002.csv'];
+const levelFileNames = [
+    './maps/test/level_001.csv',
+    './maps/test/level_002.csv',
+    './maps/test/level_003.csv',
+    './maps/test/level_004.csv'
+];
 let gameWon = false;
 let isHighScore = false;
 let score = ScoreManager();
@@ -96,25 +111,45 @@ function playBackgroundMusic() {
     bgMusicSource.start(0);
 }
 
+// NEW SOUND PLAYBACK FUNCTIONS FOR LAVA AND JUMPPAD
+function playLavaSound() {
+    playSound(lavaSoundBuffer);
+}
+
+function playJumpPadSound() {
+    playSound(jumpPadSoundBuffer);
+}
+
 
 function initAudioAndLoadSound() {
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (!soundLoaded) {
-        loadSound('sound/jump.mp3').then(buf => {
+        loadSound('./assets/sfx/jump.mp3').then(buf => {
             jumpSoundBuffer = buf;
             soundLoaded = true;
         });
     }
     if (!coinSoundLoaded) {
-        loadSound('sound/coin_pickup.mp3').then(buf => {
+        loadSound('./assets/sfx/coin_pickup.mp3').then(buf => {
             coinSoundBuffer = buf;
             coinSoundLoaded = true;
         });
     }
+    if (!lavaSoundBuffer) {
+        loadSound('./assets/sfx/lava_splash.mp3').then(buf => {
+            lavaSoundBuffer = buf;
+        });
+    }
+    if (!jumpPadSoundBuffer) {
+        loadSound('./assets/sfx/jumppad_boing.mp3').then(buf => {
+            jumpPadSoundBuffer = buf;
+        });
+    }
+
     if (!bgMusicBuffer) {
-        loadBackgroundMusic('music/Jeetix_on_edge_theme.mp3').then(buf => {
+        loadBackgroundMusic('./assets/mus/Jeetix_on_edge_theme.mp3').then(buf => {
             bgMusicBuffer = buf;
             playBackgroundMusic();
         });
@@ -152,6 +187,7 @@ async function setupLevel(levelIndex) {
 
     platforms = [];
     coins = [];
+    lavaBlocks = []; // Clear lava blocks for new level
     finishZone = null;
     startBlockInstance = null;
     finishBlockInstance = null;
@@ -185,6 +221,14 @@ async function setupLevel(levelIndex) {
                         finishBlockInstance = { x, y, width: TILE_SIZE, height: TILE_SIZE, image: assets.finish };
                     }
                     break;
+                // NEW CASES FOR LAVA AND JUMPPAD BLOCKS
+                case 'L': // Lava block
+                    lavaBlocks.push(new LavaBlock(x, y, TILE_SIZE, TILE_SIZE, assets.lava));
+                    break;
+                case 'J': // Jump Pad block
+                    // Jump pads are solid, so add to platforms array. Player class will handle special interaction.
+                    platforms.push(new JumpPadBlock(x, y, TILE_SIZE, TILE_SIZE, assets.jumppad));
+                    break;
             }
         });
     });
@@ -192,7 +236,15 @@ async function setupLevel(levelIndex) {
     if (player) {
         player.resetState(playerStartX, playerStartY);
     } else {
-        player = new Player(playerStartX, playerStartY, assets.jeetix, playJumpSound);
+        // PLAYER INITIALIZATION WITH JUMP PAD BOOST AND SOUND
+        player = new Player(
+            playerStartX,
+            playerStartY,
+            assets.jeetix,
+            playJumpSound,
+            JUMP_PAD_BOOST, // Pass boost amount
+            playJumpPadSound  // Pass jump pad sound callback
+        );
     }
         // Initial camera position update after player is set
     updateCamera();
@@ -201,6 +253,14 @@ async function setupLevel(levelIndex) {
 
 async function setupGame() {
     try {
+        assets.jeetix = await loadImage('./assets/img/jeetix.png');
+        assets.block = await loadImage('./assets/img/block.png');
+        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
+        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
+        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
+        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
+        assets.lava = await loadImage('./assets/img/lava.png'); // Load lava image
+        assets.jumppad = await loadImage('./assets/img/jumppad.png'); // Load jump pad image
         assets.jeetix = await loadImage('jeetix3.png');
         assets.block = await loadImage('block.png');
         assets.background = await loadImage('background2.png'); // assets.background = await loadImage('background1.png');
@@ -271,6 +331,20 @@ function checkCollisions() {
         }
     });
 
+    // NEW COLLISION CHECK FOR LAVA BLOCKS
+    lavaBlocks.forEach(lava => {
+        if (player.x < lava.x + lava.width &&
+            player.x + player.width > lava.x &&
+            player.y < lava.y + lava.height &&
+            player.y + player.height > lava.y) {
+            playLavaSound();
+            resetCurrentLevel(); // Player touched lava
+            return; // Exit early if reset is called
+        }
+    });
+
+
+    // Finish zone collision
     if (finishZone &&
         player.x < finishZone.x + finishZone.width &&
         player.x + player.width > finishZone.x &&
@@ -373,8 +447,9 @@ function render() {
         ctx.drawImage(finishBlockInstance.image, finishBlockInstance.x, finishBlockInstance.y, finishBlockInstance.width, finishBlockInstance.height);
     }
 
-    platforms.forEach(platform => platform.draw(ctx));
+    platforms.forEach(platform => platform.draw(ctx)); // JumpPads are drawn here as they are in platforms array
     coins.forEach(coin => coin.draw(ctx));
+    lavaBlocks.forEach(lava => lava.draw(ctx)); // Draw lava blocks
     
     if (player) {
         player.draw(ctx);
@@ -393,7 +468,10 @@ function gameLoop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
 
-    if (!isNaN(deltaTime) && deltaTime > 0) { 
+
+    if (!isNaN(deltaTime) && deltaTime > 0) {
+        const cappedDeltaTime = Math.min(deltaTime, 50); // Max 50ms, prevents huge jumps
+
         update(deltaTime / 16);
     }
     render();
