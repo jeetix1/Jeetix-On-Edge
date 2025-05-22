@@ -3,7 +3,6 @@ import Platform from './platform.js';
 import InputHandler from './input.js';
 import Coin from './coin.js';
 import ScoreManager from './scores.js';
-// NEW IMPORTS FOR LAVA AND JUMPPAD
 import LavaBlock from './lava.js';
 import JumpPadBlock from './jumppad.js';
 
@@ -255,18 +254,18 @@ async function setupGame() {
     try {
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
         assets.block = await loadImage('./assets/img/block.png');
-        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
-        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
-        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
-        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
-        assets.lava = await loadImage('./assets/img/lava.png'); // Load lava image
-        assets.jumppad = await loadImage('./assets/img/jumppad.png'); // Load jump pad image
+        assets.background = await loadImage('./assets/img/background2.png'); 
+        assets.coin = await loadImage('./assets/img/coin-sprite.png'); 
+        assets.start = await loadImage('./assets/img/start.png'); 
+        assets.finish = await loadImage('./assets/img/finish.png'); 
+        assets.lava = await loadImage('./assets/img/lava.png'); 
+        assets.jumppad = await loadImage('./assets/img/jumppad.png'); 
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
         assets.block = await loadImage('./assets/img/block.png');
-        assets.background = await loadImage('./assets/img/background2.png'); // assets.background = await loadImage('background1.png');
-        assets.coin = await loadImage('./assets/img/coin-sprite.png'); // png image with all coin frames on a line instead of gif (Useful gif to png-sprite converter: https://ezgif.com/gif-to-sprite )
-        assets.start = await loadImage('./assets/img/start.png'); // show start block (set invisible for production)
-        assets.finish = await loadImage('./assets/img/finish.png'); // show finish block (set invisible for production)
+        assets.background = await loadImage('./assets/img/background2.png'); 
+        assets.coin = await loadImage('./assets/img/coin-sprite.png'); 
+        assets.start = await loadImage('./assets/img/start.png'); 
+        assets.finish = await loadImage('./assets/img/finish.png'); 
     } catch (error) {
         console.error("Error loading assets:", error);
         ctx.fillStyle = 'red';
@@ -292,7 +291,7 @@ function resetCurrentLevel() {
     setupLevel(currentLevelIndex).then(success => {
         if (success && player) {
             player.resetState(playerStartX, playerStartY);
-            updateCamera(); // Ensure camera resets too
+            updateCamera(); 
         }
     });
 }
@@ -309,7 +308,7 @@ function goToNextLevel() {
         setupLevel(currentLevelIndex).then(success => {
             if (success && player) {
                 player.resetState(playerStartX, playerStartY);
-                 updateCamera(); // Ensure camera updates for new level
+                 updateCamera(); 
             }
         });
     }
@@ -330,7 +329,7 @@ function checkCollisions() {
         }
     });
 
-    // NEW COLLISION CHECK FOR LAVA BLOCKS
+    
     lavaBlocks.forEach(lava => {
         if (player.x < lava.x + lava.width &&
             player.x + player.width > lava.x &&

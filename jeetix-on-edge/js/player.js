@@ -1,8 +1,8 @@
 export default class Player {
     constructor(x, y, image, playJumpSoundCallback, jumpPadBoostAmount, playJumpPadSoundCallback) {
         this.image = image;
-        this.walkFrames    = 3;                    // now 3 panels in sheet
-        this.frameDuration = 200;                  // ms per frame
+        this.walkFrames    = 3;                    
+        this.frameDuration = 200;                  
         this.frameTimer    = 0;
         this.currentFrame  = 0;
         this.frameWidth  = image.width  / this.walkFrames;
