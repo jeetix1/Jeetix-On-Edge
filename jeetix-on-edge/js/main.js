@@ -389,6 +389,7 @@ function checkCollisions() {
         player.y < finishZone.y + finishZone.height &&
         player.y + player.height > finishZone.y) {
         goToNextLevel();
+        finishZone = null;   // Prevent repeats until next level sets it again.
     }
 }
 
