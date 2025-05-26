@@ -431,7 +431,8 @@ function render() {
         ctx.fillStyle = 'red'
         ctx.font = '48px Arial'
         ctx.textAlign = 'center'
-        ctx.fillText('YOU DONE FUCKED UP, SON', GAME_WIDTH/2, GAME_HEIGHT/2 - 60)
+        ctx.fillText('That was impressively bad.', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
+        ctx.fillText('Try again?', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 70);
 
         ctx.font = '24px Arial'
         ctx.fillStyle = 'white'
