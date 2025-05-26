@@ -49,10 +49,10 @@ let jumpPadSoundBuffer;
 let lastTime = 0;
 let currentLevelIndex = 0;
 const levelFileNames = [
-    './maps/test/level_001.csv',
-    './maps/test/level_002.csv',
-    './maps/test/level_003.csv',
-    './maps/test/level_004.csv'
+    './maps/main/level_001.csv',
+    './maps/main/level_002.csv',
+    './maps/main/level_003.csv',
+    './maps/main/level_004.csv'
 ];
 let gameWon = false;
 let isHighScore = false;
