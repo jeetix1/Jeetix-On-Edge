@@ -6,6 +6,7 @@ import ScoreManager from './scores.js';
 import LavaBlock from './lava.js';
 import JumpPadBlock from './jumppad.js';
 import Life from './Life.js';
+import Backloss from './backloss.js'
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -39,6 +40,12 @@ let bgMusicBuffer = null;
 let bgMusicSource = null;
 let coinSoundBuffer = null;
 let coinSoundLoaded = false;
+let gameOverMusicBuffer = null
+let gameOverMusicSource = null
+let victoryMusicBuffer = null
+let victoryMusicSource = null
+let backlossBG = null
+
 
 let showGameOverScreen = false;
 
@@ -116,6 +123,19 @@ function playBackgroundMusic() {
     bgMusicSource.start(0);
 }
 
+function playGameOverMusic() {
+  if (!audioContext || !gameOverMusicBuffer) return
+  audioContext.resume().then(() => {
+    if (bgMusicSource) bgMusicSource.stop()
+    if (gameOverMusicSource) gameOverMusicSource.stop()
+    gameOverMusicSource = audioContext.createBufferSource()
+    gameOverMusicSource.buffer = gameOverMusicBuffer
+    gameOverMusicSource.connect(audioContext.destination)
+    gameOverMusicSource.start(0)
+  })
+}
+
+
 // NEW SOUND PLAYBACK FUNCTIONS FOR LAVA AND JUMPPAD
 function playLavaSound() {
     playSound(lavaSoundBuffer);
@@ -159,6 +179,19 @@ function initAudioAndLoadSound() {
             playBackgroundMusic();
         });
     }
+
+    if (!gameOverMusicBuffer) {
+    loadSound('./assets/mus/Game_Over.mp3').then(buf => {
+        gameOverMusicBuffer = buf
+    })
+    }
+
+    if (!victoryMusicBuffer) {
+    loadSound('./assets/mus/victory_screen.mp3').then(buf => {
+        victoryMusicBuffer = buf
+    })
+    }
+
 }
 
 document.addEventListener('click', initAudioAndLoadSound, { once: true });
@@ -259,6 +292,7 @@ case 'H':
 
 async function setupGame() {
     try {
+        assets.backloss = await loadImage('./assets/img/backloss.png')
         assets.lifeIcon = await loadImage('./assets/img/life_icon.png');
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
         assets.block = await loadImage('./assets/img/block.png');
@@ -277,23 +311,29 @@ async function setupGame() {
         return;
     }
 
+  const img = assets.backloss
+  const frameW = img.width / 32
+  const frameH = img.height
+  backlossBG = new Backloss(img, frameW, frameH, 32, 5)
+
     inputHandler = new InputHandler();
-    canvas.addEventListener('click', (event) => {
-    if (!showGameOverScreen) return;
+    canvas.addEventListener('click', event => {
+  const inEndState =
+    showGameOverScreen ||
+    (gameWon && currentLevelIndex >= levelFileNames.length)
+  if (!inEndState) return
 
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+  const rect = canvas.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  const bx = GAME_WIDTH/2 - 75
+  const by = GAME_HEIGHT/2 + (showGameOverScreen ? 30 : 110)
+  const bw = 150
+  const bh = 40
 
-    const buttonX = GAME_WIDTH / 2 - 75;
-    const buttonY = GAME_HEIGHT / 2 + 30;
-    const buttonWidth = 150;
-    const buttonHeight = 40;
-
-    if (x >= buttonX && x <= buttonX + buttonWidth &&
-        y >= buttonY && y <= buttonY + buttonHeight) {
-        restartGame();
-    }
+  if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+    restartGame();
+  }
 });
     const levelOK = await setupLevel(currentLevelIndex);
     if (!levelOK) return;
@@ -305,17 +345,30 @@ function playJumpSound() {
     playSound(jumpSoundBuffer);
 }
 
+function playVictoryMusic() {
+  if (!audioContext || !victoryMusicBuffer) return
+  audioContext.resume().then(() => {
+    if (bgMusicSource)      bgMusicSource.stop()
+    if (victoryMusicSource) victoryMusicSource.stop()
+    victoryMusicSource = audioContext.createBufferSource()
+    victoryMusicSource.buffer = victoryMusicBuffer
+    victoryMusicSource.connect(audioContext.destination)
+    victoryMusicSource.start(0)
+  })
+}
+
 function resetCurrentLevel() {
   if (gameWon) return
 
   lives--
-  if (lives <= 0) {
-    gameWon = true
-    showGameOverScreen = true
-    isHighScore = score.flushToStorage()
-    console.log('GAME OVER triggered')
-    return
-  }
+if (lives <= 0) {
+  gameWon = true
+  showGameOverScreen = true
+  isHighScore = score.flushToStorage()
+  playGameOverMusic()
+  return
+}
+
 
   player.resetState(playerStartX, playerStartY)
   updateCamera()
@@ -329,7 +382,7 @@ function goToNextLevel() {
     if (currentLevelIndex >= levelFileNames.length) {
         gameWon = true;
         isHighScore = score.flushToStorage();
-        console.log("Game Won!");
+        playVictoryMusic();
     } else {
         console.log("Going to next level:", currentLevelIndex);
         setupLevel(currentLevelIndex).then(success => {
@@ -407,6 +460,11 @@ function updateCamera() {
 }
 
 function update(deltaTime) {
+    if (showGameOverScreen) {
+        backlossBG.update(deltaTime)
+        return
+    }
+
     if (gameWon || !player) return;
 
     player.update(deltaTime, inputHandler, platforms, GRAVITY, PLAYER_SPEED, JUMP_FORCE, levelPixelWidth, levelPixelHeight);
@@ -426,6 +484,7 @@ function render() {
     ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
         if (showGameOverScreen) {
+        backlossBG.draw(ctx) 
         ctx.fillStyle = 'rgba(0,0,0,0.75)'
         ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT)
 
@@ -495,8 +554,20 @@ function render() {
         } else {
             ctx.fillText(`Highscore Score: ${score.getHighScore()}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70);
         }
-        ctx.textAlign = 'left';
-        return;
+    const bx = GAME_WIDTH/2 - 75
+    const by = GAME_HEIGHT/2 + 110
+    const bw = 150
+    const bh = 40
+
+    ctx.fillStyle = '#ff4444'
+    ctx.fillRect(bx, by, bw, bh)
+    ctx.strokeStyle = 'white'
+    ctx.strokeRect(bx, by, bw, bh)
+    ctx.fillStyle = 'white'
+    ctx.textAlign = 'center'
+    ctx.fillText('RETRY', GAME_WIDTH/2, by + 27)
+
+    return
     }
     
     if (gameWon && currentLevelIndex < levelFileNames.length) { 
@@ -552,7 +623,7 @@ function gameLoop(timestamp) {
 
 
     if (!isNaN(deltaTime) && deltaTime > 0) {
-        const cappedDeltaTime = Math.min(deltaTime, 50); // Max 50ms, prevents huge jumps
+        const cappedDeltaTime = Math.min(deltaTime, 50);
 
         update(deltaTime / 16);
     }
@@ -563,6 +634,9 @@ function gameLoop(timestamp) {
 
 }
 function restartGame() {
+    if (gameOverMusicSource) gameOverMusicSource.stop(0)
+    if (victoryMusicSource)   victoryMusicSource.stop(0)
+    playBackgroundMusic();
     lives = 4;
     score.set(0);
     currentLevelIndex = 0;
