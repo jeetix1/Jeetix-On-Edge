@@ -112,16 +112,22 @@ export default class Player {
                 }
             }
         });
-        if (this.vx !== 0 && this.onGround) {
-            this.frameTimer += deltaTime * 16;
-            if (this.frameTimer >= this.frameDuration) {
-                this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
-                this.frameTimer -= this.frameDuration;
-            }
-        } else {
-            this.currentFrame = 0;
-            this.frameTimer = 0;
-        }
+        if (!this.onGround) {
+    this.frameTimer += deltaTime * 16;
+    if (this.frameTimer >= this.frameDuration) {
+        this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
+        this.frameTimer -= this.frameDuration;
+    }
+} else if (this.vx !== 0) {
+    this.frameTimer += deltaTime * 16;
+    if (this.frameTimer >= this.frameDuration) {
+        this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
+        this.frameTimer -= this.frameDuration;
+    }
+} else {
+    this.currentFrame = 0;
+    this.frameTimer   = 0;
+}
 
         // Jump
         if ((input.isPressed('Space') || input.isPressed('ArrowUp')) && this.onGround) {
