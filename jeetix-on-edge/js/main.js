@@ -45,6 +45,8 @@ let gameOverMusicBuffer = null;
 let gameOverMusicSource = null;
 let victoryMusicBuffer = null;
 let victoryMusicSource = null;
+let stompSoundBuffer;
+let enemyHitSoundBuffer;
 let backlossBG = null;
 let enemies = [];
 
@@ -143,6 +145,15 @@ function playLavaSound() {
     playSound(lavaSoundBuffer);
 }
 
+
+function playStompSound() {
+    playSound(stompSoundBuffer)
+}
+
+function playEnemyHitSound() {
+    playSound(enemyHitSoundBuffer)
+}
+
 function playJumpPadSound() {
     playSound(jumpPadSoundBuffer);
 }
@@ -193,6 +204,8 @@ function initAudioAndLoadSound() {
         victoryMusicBuffer = buf
     })
     }
+    if (!stompSoundBuffer) loadSound('./assets/sfx/stomp.mp3').then(buf => stompSoundBuffer = buf)
+    if (!enemyHitSoundBuffer) loadSound('./assets/sfx/enemy_hit.mp3').then(buf => enemyHitSoundBuffer = buf)
 
 }
 
@@ -417,13 +430,22 @@ function checkCollisions() {
     });
 
 
-    enemies.forEach(enemy => {
+    enemies = enemies.filter(enemy => {
         if (
             player.x < enemy.x + enemy.width &&
             player.x + player.width > enemy.x &&
             player.y < enemy.y + enemy.height &&
             player.y + player.height > enemy.y
-        ) resetCurrentLevel()
+        ) {
+            if (player.vy > 0 && (player.y + player.height) - enemy.y < enemy.height / 2) {
+                playStompSound()
+                player.vy = JUMP_FORCE
+                return false
+            }
+            playEnemyHitSound()
+            resetCurrentLevel()
+        }
+        return true
     })
 
 
