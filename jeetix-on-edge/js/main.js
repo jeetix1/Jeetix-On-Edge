@@ -299,6 +299,7 @@ async function setupLevel(levelIndex) {
             playerStartX,
             playerStartY,
             assets.jeetix,
+            assets.jeetixJump,
             playJumpSound,
             JUMP_PAD_BOOST, // Pass boost amount
             playJumpPadSound  // Pass jump pad sound callback
@@ -314,6 +315,7 @@ async function setupGame() {
         assets.backloss = await loadImage('./assets/img/backloss.png')
         assets.lifeIcon = await loadImage('./assets/img/life_icon.png');
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
+        assets.jeetixJump = await loadImage('./assets/img/jeetix_jump.png')
         assets.latex = await loadImage('./assets/img/enemy_latex.png')
         assets.block = await loadImage('./assets/img/block.png');
         assets.background = await loadImage('./assets/img/background2.png'); 
