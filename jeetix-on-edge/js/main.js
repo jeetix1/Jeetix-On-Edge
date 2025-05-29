@@ -7,6 +7,7 @@ import LavaBlock from './lava.js';
 import JumpPadBlock from './jumppad.js';
 import Life from './Life.js';
 import Backloss from './backloss.js'
+import Latex from './latex.js'
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -40,11 +41,14 @@ let bgMusicBuffer = null;
 let bgMusicSource = null;
 let coinSoundBuffer = null;
 let coinSoundLoaded = false;
-let gameOverMusicBuffer = null
-let gameOverMusicSource = null
-let victoryMusicBuffer = null
-let victoryMusicSource = null
-let backlossBG = null
+let gameOverMusicBuffer = null;
+let gameOverMusicSource = null;
+let victoryMusicBuffer = null;
+let victoryMusicSource = null;
+let stompSoundBuffer;
+let enemyHitSoundBuffer;
+let backlossBG = null;
+let enemies = [];
 
 
 let showGameOverScreen = false;
@@ -141,6 +145,15 @@ function playLavaSound() {
     playSound(lavaSoundBuffer);
 }
 
+
+function playStompSound() {
+    playSound(stompSoundBuffer)
+}
+
+function playEnemyHitSound() {
+    playSound(enemyHitSoundBuffer)
+}
+
 function playJumpPadSound() {
     playSound(jumpPadSoundBuffer);
 }
@@ -191,6 +204,8 @@ function initAudioAndLoadSound() {
         victoryMusicBuffer = buf
     })
     }
+    if (!stompSoundBuffer) loadSound('./assets/sfx/stomp.mp3').then(buf => stompSoundBuffer = buf)
+    if (!enemyHitSoundBuffer) loadSound('./assets/sfx/enemy_hit.mp3').then(buf => enemyHitSoundBuffer = buf)
 
 }
 
@@ -223,6 +238,7 @@ async function setupLevel(levelIndex) {
         return false;
     }
 
+    enemies = [];
     platforms = [];
     coins = [];
     lifePickups = [] ;
@@ -265,12 +281,15 @@ async function setupLevel(levelIndex) {
                 case 'J':
                     platforms.push(new JumpPadBlock(x, y, TILE_SIZE, TILE_SIZE, assets.jumppad));
                     break;
-case 'H':
-  lifePickups.push(new Life(x, y, assets.life, 22, 10))
-  break
-            }
-        });
-    });
+                case 'H':
+                lifePickups.push(new Life(x, y, assets.life, 22, 10))
+                    break;
+                case 'E':
+                    enemies.push(new Latex(x, y, assets.latex, TILE_SIZE, TILE_SIZE, 2))
+                    break;
+                            }
+                        });
+                    });
 
     if (player) {
         player.resetState(playerStartX, playerStartY);
@@ -295,6 +314,7 @@ async function setupGame() {
         assets.backloss = await loadImage('./assets/img/backloss.png')
         assets.lifeIcon = await loadImage('./assets/img/life_icon.png');
         assets.jeetix = await loadImage('./assets/img/jeetix.png');
+        assets.latex = await loadImage('./assets/img/enemy_latex.png')
         assets.block = await loadImage('./assets/img/block.png');
         assets.background = await loadImage('./assets/img/background2.png'); 
         assets.coin = await loadImage('./assets/img/coin-sprite.png'); 
@@ -410,6 +430,26 @@ function checkCollisions() {
     });
 
 
+    enemies = enemies.filter(enemy => {
+        if (
+            player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y
+        ) {
+            if (player.vy > 0 && (player.y + player.height) - enemy.y < enemy.height / 2) {
+                playStompSound()
+                player.vy = JUMP_FORCE
+                return false
+            }
+            playEnemyHitSound()
+            resetCurrentLevel()
+        }
+        return true
+    })
+
+
+
     lifePickups.forEach(lp => {
         if (lp.collected) return
         if (player.x < lp.x + lp.width &&
@@ -470,6 +510,7 @@ function update(deltaTime) {
     player.update(deltaTime, inputHandler, platforms, GRAVITY, PLAYER_SPEED, JUMP_FORCE, levelPixelWidth, levelPixelHeight);
     lifePickups.forEach(lp => lp.update(deltaTime));
     coins.forEach(coin => coin.update(deltaTime));
+    enemies.forEach(enemy => enemy.update(deltaTime, platforms, lavaBlocks, levelPixelWidth));
     checkCollisions();
     updateCamera();
 
@@ -589,6 +630,7 @@ function render() {
 
     platforms.forEach(platform => platform.draw(ctx)); // JumpPads are drawn here as they are in platforms array
     coins.forEach(coin => coin.draw(ctx));
+    enemies.forEach(enemy => enemy.draw(ctx));
     lifePickups.forEach(lp => lp.draw(ctx));
     lavaBlocks.forEach(lava => lava.draw(ctx)); // Draw lava blocks
     
