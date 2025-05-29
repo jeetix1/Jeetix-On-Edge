@@ -1,6 +1,7 @@
 export default class Player {
-    constructor(x, y, image, playJumpSoundCallback, jumpPadBoostAmount, playJumpPadSoundCallback) {
-        this.image = image;
+    constructor(x, y, image, jumpImage, playJumpSoundCallback, jumpPadBoostAmount, playJumpPadSoundCallback) {
+        this.walkImage = image
+        this.jumpImage = jumpImage
         this.walkFrames    = 3;                    
         this.frameDuration = 200;                  
         this.frameTimer    = 0;
@@ -25,13 +26,19 @@ export default class Player {
     }
 
     draw(ctx) {
-        if (!this.image) {
+        if (!this.walkImage) {
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x, this.y, this.width, this.height);
             return;
         }
 
-        const sx = this.currentFrame * this.frameWidth;
+
+        const img         = this.onGround ? this.walkImage : this.jumpImage
+        const frameCount  = 3
+        const fw          = img.width  / frameCount
+        const fh          = img.height
+        const sx          = this.currentFrame * fw
+
 
         ctx.save();
                 // Flip image if facing left
@@ -43,10 +50,10 @@ export default class Player {
         }
 
         ctx.drawImage(
-            this.image,
-            sx, 0, this.frameWidth, this.frameHeight, 
-            0,  0, this.width,      this.height      
-        );
+            img,
+            sx, 0, fw, fh,
+            0, 0, this.width, this.height
+            );
         ctx.restore();
     }
     update(deltaTime, input, platforms, gravity, playerSpeed, jumpForce, levelWidth, levelHeight) { 
@@ -105,16 +112,22 @@ export default class Player {
                 }
             }
         });
-        if (this.vx !== 0 && this.onGround) {
-            this.frameTimer += deltaTime * 16;
-            if (this.frameTimer >= this.frameDuration) {
-                this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
-                this.frameTimer -= this.frameDuration;
-            }
-        } else {
-            this.currentFrame = 0;
-            this.frameTimer = 0;
-        }
+        if (!this.onGround) {
+    this.frameTimer += deltaTime * 16;
+    if (this.frameTimer >= this.frameDuration) {
+        this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
+        this.frameTimer -= this.frameDuration;
+    }
+} else if (this.vx !== 0) {
+    this.frameTimer += deltaTime * 16;
+    if (this.frameTimer >= this.frameDuration) {
+        this.currentFrame = (this.currentFrame + 1) % this.walkFrames;
+        this.frameTimer -= this.frameDuration;
+    }
+} else {
+    this.currentFrame = 0;
+    this.frameTimer   = 0;
+}
 
         // Jump
         if ((input.isPressed('Space') || input.isPressed('ArrowUp')) && this.onGround) {
